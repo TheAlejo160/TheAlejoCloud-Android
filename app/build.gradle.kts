@@ -59,10 +59,14 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material3:material3")
+
     // Iconos extendidos para igualar a iOS
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
     // OkHttp y Gson para la API de Filebrowser
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // Novedad: Coil para cargar imágenes desde URL con Headers (Autenticación)
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }
