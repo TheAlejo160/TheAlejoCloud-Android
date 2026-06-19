@@ -6,25 +6,22 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -46,7 +43,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +61,8 @@ import okio.source
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
+import kotlin.math.log10
+import kotlin.math.pow
 
 // DTOs
 data class LoginPayload(val username: String, val password: String)
@@ -107,6 +108,14 @@ val FBItem.iconColorUI: Color
         else -> Color.Gray
     }
 
+// Formateador de bytes estilo iOS
+fun formatBytes(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    val units = arrayOf("B", "KB", "MB", "GB", "TB")
+    val digitGroups = (log10(bytes.toDouble()) / log10(1024.0)).toInt()
+    return String.format("%.1f %s", bytes / 1024.0.pow(digitGroups.toDouble()), units[digitGroups])
+}
+
 @Composable
 fun AppNube() {
     val context = LocalContext.current
@@ -140,10 +149,8 @@ fun AppNube() {
     val scope = rememberCoroutineScope()
 
     MaterialTheme(
-        colorScheme = if (currentlyDark)
-            darkColorScheme(background = bgColor, surface = surfaceColor)
-        else
-            lightColorScheme(background = bgColor, surface = surfaceColor)
+        colorScheme = if (currentlyDark) darkColorScheme(background = bgColor, surface = surfaceColor)
+        else lightColorScheme(background = bgColor, surface = surfaceColor)
     ) {
         Surface(modifier = Modifier.fillMaxSize(), color = bgColor) {
             Crossfade(targetState = isLoggedIn, label = "login_transition") { loggedIn ->
@@ -208,27 +215,17 @@ fun AppNube() {
                                 .padding(4.dp)
                         ) {
                             Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
                                     .background(if (tipoConexion == 0) Color.Gray.copy(alpha = 0.3f) else Color.Transparent)
-                                    .clickable { tipoConexion = 0 }
-                                    .padding(10.dp),
+                                    .clickable { tipoConexion = 0 }.padding(10.dp),
                                 contentAlignment = Alignment.Center
-                            ) {
-                                Text("Red Local", color = textColor, fontWeight = FontWeight.Medium)
-                            }
+                            ) { Text("Red Local", color = textColor, fontWeight = FontWeight.Medium) }
                             Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
                                     .background(if (tipoConexion == 1) Color.Gray.copy(alpha = 0.3f) else Color.Transparent)
-                                    .clickable { tipoConexion = 1 }
-                                    .padding(10.dp),
+                                    .clickable { tipoConexion = 1 }.padding(10.dp),
                                 contentAlignment = Alignment.Center
-                            ) {
-                                Text("Externo", color = textColor, fontWeight = FontWeight.Medium)
-                            }
+                            ) { Text("Externo", color = textColor, fontWeight = FontWeight.Medium) }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -240,17 +237,11 @@ fun AppNube() {
                                 .padding(16.dp)
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showSettings = !showSettings },
+                                modifier = Modifier.fillMaxWidth().clickable { showSettings = !showSettings },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text("⚙️ Configuración de Servidores", color = textColor, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                                Icon(
-                                    if (showSettings) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
-                                    contentDescription = null,
-                                    tint = textColor
-                                )
+                                Icon(if (showSettings) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight, contentDescription = null, tint = textColor)
                             }
                             AnimatedVisibility(visible = showSettings) {
                                 Column(modifier = Modifier.padding(top = 16.dp)) {
@@ -276,12 +267,9 @@ fun AppNube() {
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    focusedTextColor = textColor,
-                                    unfocusedTextColor = textColor
+                                    focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+                                    focusedTextColor = textColor, unfocusedTextColor = textColor
                                 )
                             )
                             HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
@@ -293,12 +281,9 @@ fun AppNube() {
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                    focusedTextColor = textColor,
-                                    unfocusedTextColor = textColor
+                                    focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+                                    focusedTextColor = textColor, unfocusedTextColor = textColor
                                 )
                             )
                         }
@@ -323,11 +308,9 @@ fun AppNube() {
                                             if (response.isSuccessful) {
                                                 val jwt = response.body?.string() ?: ""
                                                 prefs.edit()
-                                                    .putString("username", username)
-                                                    .putString("password", password)
+                                                    .putString("username", username).putString("password", password)
                                                     .putInt("tipoConexion", tipoConexion)
-                                                    .putString("urlLocal", urlLocal)
-                                                    .putString("urlExterna", urlExterna)
+                                                    .putString("urlLocal", urlLocal).putString("urlExterna", urlExterna)
                                                     .apply()
                                                 withContext(Dispatchers.Main) {
                                                     token = jwt
@@ -348,9 +331,7 @@ fun AppNube() {
                                     }
                                 }
                             },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
                             shape = RoundedCornerShape(12.dp),
                             enabled = !isLoadingLogin
@@ -372,6 +353,7 @@ fun AppNube() {
 @Composable
 fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Color, textColor: Color, alSalir: () -> Unit) {
     val context = LocalContext.current
+    val prefs = context.getSharedPreferences("AlejoCloudPrefs", Context.MODE_PRIVATE)
     val scope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
     val isWideScreen = configuration.screenWidthDp > 600
@@ -382,7 +364,7 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
 
     var modoSeleccionActive by remember { mutableStateOf(false) }
     var itemsSeleccionados by remember { mutableStateOf(setOf<String>()) }
-    var agruparPorTipo by remember { mutableStateOf(false) }
+    var agruparPorTipo by remember { mutableStateOf(prefs.getBoolean("agruparPorTipo", false)) }
 
     var estadoOperacion by remember { mutableStateOf("") }
     var isProcessing by remember { mutableStateOf(false) }
@@ -655,55 +637,31 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                 exit = slideOutVertically { it }
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(25.dp),
+                    modifier = Modifier.fillMaxWidth().padding(25.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
                         onClick = { descargarSeleccion() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(55.dp)
-                            .shadow(
-                                10.dp,
-                                RoundedCornerShape(16.dp),
-                                spotColor = Color(0xFF2196F3).copy(alpha = 0.5f)
-                            ),
+                        modifier = Modifier.fillMaxWidth().height(55.dp)
+                            .shadow(10.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF2196F3).copy(alpha = 0.5f)),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Descargar (${itemsSeleccionados.size})",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("Descargar (${itemsSeleccionados.size})", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
 
                     Button(
                         onClick = { borrarSeleccion() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(55.dp)
-                            .shadow(
-                                10.dp,
-                                RoundedCornerShape(16.dp),
-                                spotColor = Color.Red.copy(alpha = 0.5f)
-                            ),
+                        modifier = Modifier.fillMaxWidth().height(55.dp)
+                            .shadow(10.dp, RoundedCornerShape(16.dp), spotColor = Color.Red.copy(alpha = 0.5f)),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Borrar (${itemsSeleccionados.size})",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("Borrar (${itemsSeleccionados.size})", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -715,8 +673,7 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                 Row(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
-                            .weight(0.26f)
-                            .fillMaxHeight()
+                            .weight(0.26f).fillMaxHeight()
                             .background(if (isDark) Color(0xFF1C1C1E) else Color.White)
                             .verticalScroll(rememberScrollState())
                     ) {
@@ -730,32 +687,20 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                         }
                         Text(
                             if (currentPath == "/") "Carpetas Principales" else "Subcarpetas",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = textColor,
-                            modifier = Modifier.padding(16.dp)
+                            fontWeight = FontWeight.Bold, fontSize = 18.sp, color = textColor, modifier = Modifier.padding(16.dp)
                         )
 
                         if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally),
-                                color = Color(0xFF2196F3)
-                            )
+                            CircularProgressIndicator(modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally), color = Color(0xFF2196F3))
                         } else if (carpetas.isEmpty()) {
                             Text("No hay subcarpetas.", color = Color.Gray, modifier = Modifier.padding(16.dp))
                         } else {
                             carpetas.forEach { carpeta ->
                                 FolderRowView(
-                                    carpeta,
-                                    itemsSeleccionados.contains(carpeta.path),
-                                    modoSeleccionActive,
-                                    textColor
+                                    carpeta, itemsSeleccionados.contains(carpeta.path), modoSeleccionActive, textColor
                                 ) {
-                                    if (modoSeleccionActive) {
-                                        itemsSeleccionados = if (itemsSeleccionados.contains(carpeta.path)) itemsSeleccionados - carpeta.path else itemsSeleccionados + carpeta.path
-                                    } else {
-                                        navegarInPlace(carpeta.path)
-                                    }
+                                    if (modoSeleccionActive) itemsSeleccionados = if (itemsSeleccionados.contains(carpeta.path)) itemsSeleccionados - carpeta.path else itemsSeleccionados + carpeta.path
+                                    else navegarInPlace(carpeta.path)
                                 }
                             }
                         }
@@ -765,19 +710,19 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
 
                     Column(modifier = Modifier.weight(0.74f).fillMaxHeight()) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA))
-                                .padding(4.dp)
+                            modifier = Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(50))
+                                .background(if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)).padding(4.dp)
                         ) {
                             Box(
-                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = false }.background(if (!agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(50))
+                                    .clickable { agruparPorTipo = false; prefs.edit().putBoolean("agruparPorTipo", false).apply() }
+                                    .background(if (!agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
                                 contentAlignment = Alignment.Center
                             ) { Text("General", color = if (!agruparPorTipo) textColor else Color.Gray, fontWeight = if (!agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
                             Box(
-                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = true }.background(if (agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(50))
+                                    .clickable { agruparPorTipo = true; prefs.edit().putBoolean("agruparPorTipo", true).apply() }
+                                    .background(if (agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
                                 contentAlignment = Alignment.Center
                             ) { Text("Por Tipo", color = if (agruparPorTipo) textColor else Color.Gray, fontWeight = if (agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
                         }
@@ -790,8 +735,7 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                             LazyVerticalGrid(
                                 columns = GridCells.Adaptive(minSize = 110.dp),
                                 contentPadding = PaddingValues(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 if (agruparPorTipo) {
@@ -800,19 +744,14 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                         item(span = { GridItemSpan(maxLineSpan) }) {
                                             Text(
                                                 if (ext.isEmpty()) "OTROS" else ext.uppercase(),
-                                                fontWeight = FontWeight.Bold,
-                                                color = textColor,
-                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold, color = textColor, fontSize = 14.sp,
                                                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                                             )
                                         }
                                         items(agrupados[ext]!!, key = { it.path }) { doc ->
                                             ItemCardView(doc, itemsSeleccionados.contains(doc.path), modoSeleccionActive, baseURL, token, surfaceColor, textColor) {
                                                 if (modoSeleccionActive) itemsSeleccionados = if (itemsSeleccionados.contains(doc.path)) itemsSeleccionados - doc.path else itemsSeleccionados + doc.path
-                                                else {
-                                                    itemsSeleccionados = setOf(doc.path)
-                                                    descargarSeleccion()
-                                                }
+                                                else { itemsSeleccionados = setOf(doc.path); descargarSeleccion() }
                                             }
                                         }
                                     }
@@ -820,10 +759,7 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                     items(documentos, key = { it.path }) { doc ->
                                         ItemCardView(doc, itemsSeleccionados.contains(doc.path), modoSeleccionActive, baseURL, token, surfaceColor, textColor) {
                                             if (modoSeleccionActive) itemsSeleccionados = if (itemsSeleccionados.contains(doc.path)) itemsSeleccionados - doc.path else itemsSeleccionados + doc.path
-                                            else {
-                                                itemsSeleccionados = setOf(doc.path)
-                                                descargarSeleccion()
-                                            }
+                                            else { itemsSeleccionados = setOf(doc.path); descargarSeleccion() }
                                         }
                                     }
                                 }
@@ -841,10 +777,7 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                 Text("Volver", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
                             Text(
-                                currentTitle,
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textColor,
+                                currentTitle, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = textColor,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
@@ -853,8 +786,7 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                     if (!isLoading && archivos.isEmpty()) {
                         Column(
                             modifier = Modifier.fillMaxSize().padding(30.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
                         ) {
                             Icon(Icons.Default.CreateNewFolder, contentDescription = null, modifier = Modifier.size(70.dp), tint = Color(0xFF2196F3).copy(alpha = 0.6f))
                             Spacer(modifier = Modifier.height(16.dp))
@@ -866,26 +798,25 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = 110.dp),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
                             if (carpetas.isNotEmpty() || documentos.isNotEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 8.dp)
-                                            .clip(RoundedCornerShape(50))
-                                            .background(if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA))
-                                            .padding(4.dp)
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(50))
+                                            .background(if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)).padding(4.dp)
                                     ) {
                                         Box(
-                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = false }.background(if (!agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
+                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(50))
+                                                .clickable { agruparPorTipo = false; prefs.edit().putBoolean("agruparPorTipo", false).apply() }
+                                                .background(if (!agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
                                             contentAlignment = Alignment.Center
                                         ) { Text("General", color = if (!agruparPorTipo) textColor else Color.Gray, fontWeight = if (!agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
                                         Box(
-                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = true }.background(if (agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
+                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(50))
+                                                .clickable { agruparPorTipo = true; prefs.edit().putBoolean("agruparPorTipo", true).apply() }
+                                                .background(if (agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
                                             contentAlignment = Alignment.Center
                                         ) { Text("Por Tipo", color = if (agruparPorTipo) textColor else Color.Gray, fontWeight = if (agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
                                     }
@@ -911,19 +842,14 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                         item(span = { GridItemSpan(maxLineSpan) }) {
                                             Text(
                                                 if (ext.isEmpty()) "OTROS" else ext.uppercase(),
-                                                fontWeight = FontWeight.Bold,
-                                                color = textColor,
-                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold, color = textColor, fontSize = 14.sp,
                                                 modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
                                             )
                                         }
                                         items(agrupados[ext]!!, key = { it.path }) { doc ->
                                             ItemCardView(doc, itemsSeleccionados.contains(doc.path), modoSeleccionActive, baseURL, token, surfaceColor, textColor) {
                                                 if (modoSeleccionActive) itemsSeleccionados = if (itemsSeleccionados.contains(doc.path)) itemsSeleccionados - doc.path else itemsSeleccionados + doc.path
-                                                else {
-                                                    itemsSeleccionados = setOf(doc.path)
-                                                    descargarSeleccion()
-                                                }
+                                                else { itemsSeleccionados = setOf(doc.path); descargarSeleccion() }
                                             }
                                         }
                                     }
@@ -934,10 +860,7 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                     items(documentos, key = { it.path }) { doc ->
                                         ItemCardView(doc, itemsSeleccionados.contains(doc.path), modoSeleccionActive, baseURL, token, surfaceColor, textColor) {
                                             if (modoSeleccionActive) itemsSeleccionados = if (itemsSeleccionados.contains(doc.path)) itemsSeleccionados - doc.path else itemsSeleccionados + doc.path
-                                            else {
-                                                itemsSeleccionados = setOf(doc.path)
-                                                descargarSeleccion()
-                                            }
+                                            else { itemsSeleccionados = setOf(doc.path); descargarSeleccion() }
                                         }
                                     }
                                 }
@@ -948,14 +871,8 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
             }
 
             if (isProcessing) {
-                Box(
-                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.background(surfaceColor, RoundedCornerShape(16.dp)).padding(30.dp)
-                    ) {
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.background(surfaceColor, RoundedCornerShape(16.dp)).padding(30.dp)) {
                         CircularProgressIndicator(color = Color(0xFF2196F3))
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(estadoOperacion, color = textColor, fontWeight = FontWeight.Bold)
@@ -969,14 +886,7 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
         AlertDialog(
             onDismissRequest = { showDialogCarpeta = false },
             title = { Text("Nueva Carpeta", color = textColor) },
-            text = {
-                OutlinedTextField(
-                    value = nombreNuevaCarpeta,
-                    onValueChange = { nombreNuevaCarpeta = it },
-                    placeholder = { Text("Nombre") },
-                    singleLine = true
-                )
-            },
+            text = { OutlinedTextField(value = nombreNuevaCarpeta, onValueChange = { nombreNuevaCarpeta = it }, placeholder = { Text("Nombre") }, singleLine = true) },
             confirmButton = { TextButton(onClick = { crearCarpeta() }) { Text("Crear") } },
             dismissButton = { TextButton(onClick = { showDialogCarpeta = false; nombreNuevaCarpeta = "" }) { Text("Cancelar", color = Color.Red) } },
             containerColor = surfaceColor
@@ -1013,16 +923,56 @@ fun FolderRowView(carpeta: FBItem, isSelected: Boolean, isSelectionMode: Boolean
         Icon(Icons.Default.Folder, contentDescription = null, tint = Color(0xFF2196F3), modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            carpeta.name,
-            color = textColor,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            carpeta.name, color = textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
         )
         if (!isSelectionMode) {
             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+// -----------------------------------------------------------
+// El "AuthImageView" que simula la lógica multiplataforma de iOS
+// Controla la carga y si falla (ej. MP4 o PDF sin miniatura)
+// pasa directamente al ícono predeterminado en lugar de quedar en blanco.
+// -----------------------------------------------------------
+@Composable
+fun AuthImageView(
+    path: String,
+    baseURL: String,
+    token: String,
+    fallbackVector: ImageVector,
+    fallbackColor: Color
+) {
+    val imageRequest = ImageRequest.Builder(LocalContext.current)
+        .data("$baseURL/api/preview/thumb${path.replace(" ", "%20")}")
+        .addHeader("X-Auth", token)
+        .crossfade(true)
+        .build()
+
+    SubcomposeAsyncImage(
+        model = imageRequest,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))
+    ) {
+        val state = painter.state
+        when (state) {
+            is AsyncImagePainter.State.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = fallbackColor.copy(alpha = 0.5f))
+                }
+            }
+            is AsyncImagePainter.State.Error -> {
+                // AQUÍ OCURRE LA MAGIA. Si Filebrowser falla al mandar miniatura, usamos el ícono default
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(fallbackVector, contentDescription = null, tint = fallbackColor, modifier = Modifier.size(45.dp))
+                }
+            }
+            else -> {
+                SubcomposeAsyncImageContent()
+            }
         }
     }
 }
@@ -1056,16 +1006,13 @@ fun ItemCardView(
     ) {
         Box(modifier = Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
             if (archivo.hasPreview) {
-                val imageRequest = ImageRequest.Builder(LocalContext.current)
-                    .data("$baseURL/api/preview/thumb${archivo.path.replace(" ", "%20")}")
-                    .addHeader("X-Auth", token)
-                    .crossfade(true)
-                    .build()
-                AsyncImage(
-                    model = imageRequest,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))
+                // Implementando AuthImageView con fallback si da error 404/500
+                AuthImageView(
+                    path = archivo.path,
+                    baseURL = baseURL,
+                    token = token,
+                    fallbackVector = archivo.iconVector,
+                    fallbackColor = archivo.iconColorUI
                 )
             } else {
                 Icon(archivo.iconVector, contentDescription = null, tint = archivo.iconColorUI, modifier = Modifier.size(45.dp))
@@ -1095,7 +1042,8 @@ fun ItemCardView(
             textAlign = TextAlign.Center
         )
         if (!archivo.isDir && archivo.size != null) {
-            Text("${archivo.size / 1024} KB", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+            // Usa el nuevo formato hermoso en vez de "KB"
+            Text(formatBytes(archivo.size), color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }

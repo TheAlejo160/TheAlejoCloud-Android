@@ -10,15 +10,17 @@
         android:label="TheAlejoCloud"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.TheAlejoCloud"
-        android:usesCleartextTraffic="true"> <activity
-        android:name=".MainActivity"
-        android:exported="true"
-        android:theme="@style/Theme.TheAlejoCloud">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-    </activity>
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TheAlejoCloud">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <provider
             android:name="androidx.core.content.FileProvider"
