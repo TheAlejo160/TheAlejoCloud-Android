@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -38,7 +40,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -121,10 +122,9 @@ fun AppNube() {
     var isAutoTheme by remember { mutableStateOf(prefs.getBoolean("isAutoTheme", true)) }
     var isDarkMode by remember { mutableStateOf(prefs.getBoolean("isDarkMode", false)) }
 
-    val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val systemDark = isSystemInDarkTheme()
     val currentlyDark = if (isAutoTheme) systemDark else isDarkMode
 
-    // Colores dinámicos suavizados equivalentes a iOS
     val bgColor by animateColorAsState(if (currentlyDark) Color(0xFF141414) else Color(0xFFF5F5FA), animationSpec = tween(600), label = "bg")
     val surfaceColor by animateColorAsState(if (currentlyDark) Color(0xFF1C1C1E) else Color.White, animationSpec = tween(600), label = "surface")
     val textColor by animateColorAsState(if (currentlyDark) Color.White else Color.Black, animationSpec = tween(600), label = "text")
@@ -139,16 +139,26 @@ fun AppNube() {
 
     val scope = rememberCoroutineScope()
 
-    MaterialTheme(colorScheme = if (currentlyDark) darkColorScheme(background = bgColor, surface = surfaceColor) else lightColorScheme(background = bgColor, surface = surfaceColor)) {
+    MaterialTheme(
+        colorScheme = if (currentlyDark)
+            darkColorScheme(background = bgColor, surface = surfaceColor)
+        else
+            lightColorScheme(background = bgColor, surface = surfaceColor)
+    ) {
         Surface(modifier = Modifier.fillMaxSize(), color = bgColor) {
             Crossfade(targetState = isLoggedIn, label = "login_transition") { loggedIn ->
                 if (loggedIn) {
-                    NubeView(token = token, baseURL = urlBaseActiva, isDark = currentlyDark, surfaceColor = surfaceColor, textColor = textColor) {
+                    NubeView(
+                        token = token,
+                        baseURL = urlBaseActiva,
+                        isDark = currentlyDark,
+                        surfaceColor = surfaceColor,
+                        textColor = textColor
+                    ) {
                         isLoggedIn = false
                         token = ""
                     }
                 } else {
-                    // PANTALLA DE LOGIN
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -162,13 +172,16 @@ fun AppNube() {
                         Text("TheAlejoCloud", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = textColor)
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Theme Controls
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = {
                                 isAutoTheme = !isAutoTheme
                                 prefs.edit().putBoolean("isAutoTheme", isAutoTheme).apply()
                             }) {
-                                Icon(if (isAutoTheme) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank, contentDescription = null, tint = if (isAutoTheme) Color(0xFF2196F3) else Color.Gray)
+                                Icon(
+                                    if (isAutoTheme) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                                    contentDescription = null,
+                                    tint = if (isAutoTheme) Color(0xFF2196F3) else Color.Gray
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Auto", color = textColor)
                             }
@@ -187,43 +200,57 @@ fun AppNube() {
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        // Segmented Control (Red Local / Externo)
-                        Row(modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(surfaceColor)
-                            .padding(4.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(surfaceColor)
+                                .padding(4.dp)
                         ) {
-                            Box(modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (tipoConexion == 0) Color.Gray.copy(alpha = 0.3f) else Color.Transparent)
-                                .clickable { tipoConexion = 0 }
-                                .padding(10.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (tipoConexion == 0) Color.Gray.copy(alpha = 0.3f) else Color.Transparent)
+                                    .clickable { tipoConexion = 0 }
+                                    .padding(10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text("Red Local", color = textColor, fontWeight = FontWeight.Medium)
                             }
-                            Box(modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (tipoConexion == 1) Color.Gray.copy(alpha = 0.3f) else Color.Transparent)
-                                .clickable { tipoConexion = 1 }
-                                .padding(10.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (tipoConexion == 1) Color.Gray.copy(alpha = 0.3f) else Color.Transparent)
+                                    .clickable { tipoConexion = 1 }
+                                    .padding(10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text("Externo", color = textColor, fontWeight = FontWeight.Medium)
                             }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        // Settings Disclosure
-                        Column(modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(surfaceColor)
-                            .padding(16.dp)) {
-                            Row(modifier = Modifier
+                        Column(
+                            modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { showSettings = !showSettings }, verticalAlignment = Alignment.CenterVertically) {
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(surfaceColor)
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showSettings = !showSettings },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text("⚙️ Configuración de Servidores", color = textColor, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                                Icon(if (showSettings) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight, contentDescription = null, tint = textColor)
+                                Icon(
+                                    if (showSettings) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = textColor
+                                )
                             }
                             AnimatedVisibility(visible = showSettings) {
                                 Column(modifier = Modifier.padding(top = 16.dp)) {
@@ -235,14 +262,45 @@ fun AppNube() {
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        Column(modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(surfaceColor)
-                            .padding(8.dp)) {
-                            TextField(value = username, onValueChange = { username = it }, placeholder = { Text("Usuario") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, focusedTextColor = textColor, unfocusedTextColor = textColor))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(surfaceColor)
+                                .padding(8.dp)
+                        ) {
+                            TextField(
+                                value = username,
+                                onValueChange = { username = it },
+                                placeholder = { Text("Usuario") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    focusedTextColor = textColor,
+                                    unfocusedTextColor = textColor
+                                )
+                            )
                             HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
-                            TextField(value = password, onValueChange = { password = it }, placeholder = { Text("Contraseña") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true, colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, focusedTextColor = textColor, unfocusedTextColor = textColor))
+                            TextField(
+                                value = password,
+                                onValueChange = { password = it },
+                                placeholder = { Text("Contraseña") },
+                                visualTransformation = PasswordVisualTransformation(),
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    focusedTextColor = textColor,
+                                    unfocusedTextColor = textColor
+                                )
+                            )
                         }
 
                         if (errorMensaje.isNotEmpty()) {
@@ -264,7 +322,13 @@ fun AppNube() {
                                             val response = client.newCall(request).execute()
                                             if (response.isSuccessful) {
                                                 val jwt = response.body?.string() ?: ""
-                                                prefs.edit().putString("username", username).putString("password", password).putInt("tipoConexion", tipoConexion).putString("urlLocal", urlLocal).putString("urlExterna", urlExterna).apply()
+                                                prefs.edit()
+                                                    .putString("username", username)
+                                                    .putString("password", password)
+                                                    .putInt("tipoConexion", tipoConexion)
+                                                    .putString("urlLocal", urlLocal)
+                                                    .putString("urlExterna", urlExterna)
+                                                    .apply()
                                                 withContext(Dispatchers.Main) {
                                                     token = jwt
                                                     urlBaseActiva = base
@@ -389,10 +453,43 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                     val body = "".toRequestBody(null)
                     val request = Request.Builder().url("$baseURL/api/resources$rutaSegura").post(body).header("X-Auth", token).build()
                     client.newCall(request).execute()
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
                 withContext(Dispatchers.Main) {
                     nombreNuevaCarpeta = ""
                     isProcessing = false
+                    cargarArchivos(currentPath)
+                }
+            }
+        }
+    }
+
+    fun borrarSeleccion() {
+        if (itemsSeleccionados.isEmpty()) return
+        isProcessing = true
+        estadoOperacion = "Eliminando..."
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                val client = OkHttpClient()
+                itemsSeleccionados.forEach { path ->
+                    try {
+                        val rutaSegura = path.replace(" ", "%20")
+                        val request = Request.Builder()
+                            .url("$baseURL/api/resources$rutaSegura")
+                            .delete()
+                            .header("X-Auth", token)
+                            .build()
+                        client.newCall(request).execute()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    isProcessing = false
+                    estadoOperacion = ""
+                    modoSeleccionActive = false
+                    itemsSeleccionados = emptySet()
                     cargarArchivos(currentPath)
                 }
             }
@@ -431,7 +528,9 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                         val requestBody = context.contentResolver.createStreamingRequestBody(uri)
                         val request = Request.Builder().url("$baseURL/api/resources$destino").post(requestBody).header("X-Auth", token).build()
                         client.newCall(request).execute()
-                    } catch (e: Exception) { e.printStackTrace() }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
                 withContext(Dispatchers.Main) {
                     isProcessing = false
@@ -468,7 +567,9 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                             outputStream.close()
                             urisToShare.add(FileProvider.getUriForFile(context, "${context.packageName}.provider", tempFile))
                         }
-                    } catch (e: Exception) { e.printStackTrace() }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 } else {
                     val pathsStr = itemsSeleccionados.joinToString(",")
                     val querySegura = pathsStr.replace(" ", "%20")
@@ -483,7 +584,9 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                             outputStream.close()
                             urisToShare.add(FileProvider.getUriForFile(context, "${context.packageName}.provider", tempFile))
                         }
-                    } catch (e: Exception) { e.printStackTrace() }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
             isProcessing = false
@@ -528,8 +631,16 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                 Icon(Icons.Default.AddCircle, contentDescription = "Añadir", tint = textColor)
                             }
                             DropdownMenu(expanded = showMenuCrear, onDismissRequest = { showMenuCrear = false }) {
-                                DropdownMenuItem(text = { Text("Subir Archivo") }, leadingIcon = { Icon(Icons.Default.UploadFile, null) }, onClick = { showMenuCrear = false; launcherSubidaMasiva.launch("*/*") })
-                                DropdownMenuItem(text = { Text("Nueva Carpeta") }, leadingIcon = { Icon(Icons.Default.CreateNewFolder, null) }, onClick = { showMenuCrear = false; showDialogCarpeta = true })
+                                DropdownMenuItem(
+                                    text = { Text("Subir Archivo") },
+                                    leadingIcon = { Icon(Icons.Default.UploadFile, null) },
+                                    onClick = { showMenuCrear = false; launcherSubidaMasiva.launch("*/*") }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Nueva Carpeta") },
+                                    leadingIcon = { Icon(Icons.Default.CreateNewFolder, null) },
+                                    onClick = { showMenuCrear = false; showDialogCarpeta = true }
+                                )
                             }
                         }
                     }
@@ -538,22 +649,61 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
             )
         },
         bottomBar = {
-            AnimatedVisibility(visible = modoSeleccionActive && itemsSeleccionados.isNotEmpty(), enter = slideInVertically { it }, exit = slideOutVertically { it }) {
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(25.dp)) {
+            AnimatedVisibility(
+                visible = modoSeleccionActive && itemsSeleccionados.isNotEmpty(),
+                enter = slideInVertically { it },
+                exit = slideOutVertically { it }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(25.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Button(
                         onClick = { descargarSeleccion() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(55.dp)
-                            .shadow(10.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF2196F3).copy(alpha = 0.5f)),
+                            .shadow(
+                                10.dp,
+                                RoundedCornerShape(16.dp),
+                                spotColor = Color(0xFF2196F3).copy(alpha = 0.5f)
+                            ),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Descargar (${itemsSeleccionados.size})", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Descargar (${itemsSeleccionados.size})",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Button(
+                        onClick = { borrarSeleccion() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(55.dp)
+                            .shadow(
+                                10.dp,
+                                RoundedCornerShape(16.dp),
+                                spotColor = Color.Red.copy(alpha = 0.5f)
+                            ),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Borrar (${itemsSeleccionados.size})",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -562,14 +712,14 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (isWideScreen) {
-                // DISEÑO SPLIT VIEW (Tablet)
                 Row(modifier = Modifier.fillMaxSize()) {
-                    // Panel Izquierdo (26%)
-                    Column(modifier = Modifier
-                        .weight(0.26f)
-                        .fillMaxHeight()
-                        .background(if (isDark) Color(0xFF1C1C1E) else Color.White)
-                        .verticalScroll(rememberScrollState())) {
+                    Column(
+                        modifier = Modifier
+                            .weight(0.26f)
+                            .fillMaxHeight()
+                            .background(if (isDark) Color(0xFF1C1C1E) else Color.White)
+                            .verticalScroll(rememberScrollState())
+                    ) {
                         if (currentPath != "/") {
                             TextButton(onClick = { retroceder() }, modifier = Modifier.padding(16.dp)) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.Red)
@@ -578,15 +728,29 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                             }
                             HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
                         }
-                        Text(if (currentPath == "/") "Carpetas Principales" else "Subcarpetas", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = textColor, modifier = Modifier.padding(16.dp))
+                        Text(
+                            if (currentPath == "/") "Carpetas Principales" else "Subcarpetas",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = textColor,
+                            modifier = Modifier.padding(16.dp)
+                        )
 
                         if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally), color = Color(0xFF2196F3))
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally),
+                                color = Color(0xFF2196F3)
+                            )
                         } else if (carpetas.isEmpty()) {
                             Text("No hay subcarpetas.", color = Color.Gray, modifier = Modifier.padding(16.dp))
                         } else {
                             carpetas.forEach { carpeta ->
-                                FolderRowView(carpeta, itemsSeleccionados.contains(carpeta.path), modoSeleccionActive, textColor) {
+                                FolderRowView(
+                                    carpeta,
+                                    itemsSeleccionados.contains(carpeta.path),
+                                    modoSeleccionActive,
+                                    textColor
+                                ) {
                                     if (modoSeleccionActive) {
                                         itemsSeleccionados = if (itemsSeleccionados.contains(carpeta.path)) itemsSeleccionados - carpeta.path else itemsSeleccionados + carpeta.path
                                     } else {
@@ -599,16 +763,23 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
 
                     VerticalDivider(color = Color.Gray.copy(alpha = 0.2f), thickness = 1.dp)
 
-                    // Panel Derecho (74%)
                     Column(modifier = Modifier.weight(0.74f).fillMaxHeight()) {
-                        Row(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA))
-                            .padding(4.dp)) {
-                            Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = false }.background(if (!agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp), contentAlignment = Alignment.Center) { Text("General", color = if(!agruparPorTipo) textColor else Color.Gray, fontWeight = if(!agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
-                            Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = true }.background(if (agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp), contentAlignment = Alignment.Center) { Text("Por Tipo", color = if(agruparPorTipo) textColor else Color.Gray, fontWeight = if(agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA))
+                                .padding(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = false }.background(if (!agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) { Text("General", color = if (!agruparPorTipo) textColor else Color.Gray, fontWeight = if (!agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
+                            Box(
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = true }.background(if (agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) { Text("Por Tipo", color = if (agruparPorTipo) textColor else Color.Gray, fontWeight = if (agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
                         }
 
                         if (isLoading) {
@@ -616,17 +787,32 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                         } else if (documentos.isEmpty()) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No hay archivos sueltos aquí.", color = Color.Gray) }
                         } else {
-                            LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 110.dp), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxSize()) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 110.dp),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
                                 if (agruparPorTipo) {
                                     val agrupados = documentos.groupBy { it.fileExtension }
                                     agrupados.keys.sorted().forEach { ext ->
                                         item(span = { GridItemSpan(maxLineSpan) }) {
-                                            Text(if (ext.isEmpty()) "OTROS" else ext.uppercase(), fontWeight = FontWeight.Bold, color = textColor, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                                            Text(
+                                                if (ext.isEmpty()) "OTROS" else ext.uppercase(),
+                                                fontWeight = FontWeight.Bold,
+                                                color = textColor,
+                                                fontSize = 14.sp,
+                                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                                            )
                                         }
                                         items(agrupados[ext]!!, key = { it.path }) { doc ->
                                             ItemCardView(doc, itemsSeleccionados.contains(doc.path), modoSeleccionActive, baseURL, token, surfaceColor, textColor) {
                                                 if (modoSeleccionActive) itemsSeleccionados = if (itemsSeleccionados.contains(doc.path)) itemsSeleccionados - doc.path else itemsSeleccionados + doc.path
-                                                else { itemsSeleccionados = setOf(doc.path); descargarSeleccion() }
+                                                else {
+                                                    itemsSeleccionados = setOf(doc.path)
+                                                    descargarSeleccion()
+                                                }
                                             }
                                         }
                                     }
@@ -634,7 +820,10 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                     items(documentos, key = { it.path }) { doc ->
                                         ItemCardView(doc, itemsSeleccionados.contains(doc.path), modoSeleccionActive, baseURL, token, surfaceColor, textColor) {
                                             if (modoSeleccionActive) itemsSeleccionados = if (itemsSeleccionados.contains(doc.path)) itemsSeleccionados - doc.path else itemsSeleccionados + doc.path
-                                            else { itemsSeleccionados = setOf(doc.path); descargarSeleccion() }
+                                            else {
+                                                itemsSeleccionados = setOf(doc.path)
+                                                descargarSeleccion()
+                                            }
                                         }
                                     }
                                 }
@@ -643,9 +832,7 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                     }
                 }
             } else {
-                // DISEÑO MÓVIL (Todo unificado en un solo LazyVerticalGrid infinito sin scroll anidado)
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Header fijo
                     if (currentPath != "/") {
                         VStack(alignment = Alignment.Start) {
                             TextButton(onClick = { retroceder() }, modifier = Modifier.padding(start = 8.dp)) {
@@ -653,13 +840,22 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Volver", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
-                            Text(currentTitle, fontStyle = androidx.compose.ui.text.font.FontStyle.Normal, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = textColor, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                            Text(
+                                currentTitle,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
                         }
                     }
 
                     if (!isLoading && archivos.isEmpty()) {
-                        // Empty State Móvil Identico a iOS
-                        Column(modifier = Modifier.fillMaxSize().padding(30.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(30.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
                             Icon(Icons.Default.CreateNewFolder, contentDescription = null, modifier = Modifier.size(70.dp), tint = Color(0xFF2196F3).copy(alpha = 0.6f))
                             Spacer(modifier = Modifier.height(16.dp))
                             Text("Esta carpeta está vacía", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
@@ -667,7 +863,6 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                             Text("Puedes subir archivos o crear una carpeta en el botón '+'.", fontSize = 14.sp, color = Color.Gray.copy(alpha = 0.8f), textAlign = TextAlign.Center)
                         }
                     } else {
-                        // Grid general para todo el contenido
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = 110.dp),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
@@ -677,14 +872,22 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                         ) {
                             if (carpetas.isNotEmpty() || documentos.isNotEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
-                                    Row(modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
-                                        .clip(RoundedCornerShape(50))
-                                        .background(if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA))
-                                        .padding(4.dp)) {
-                                        Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = false }.background(if (!agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp), contentAlignment = Alignment.Center) { Text("General", color = if(!agruparPorTipo) textColor else Color.Gray, fontWeight = if(!agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
-                                        Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = true }.background(if (agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp), contentAlignment = Alignment.Center) { Text("Por Tipo", color = if(agruparPorTipo) textColor else Color.Gray, fontWeight = if(agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 8.dp)
+                                            .clip(RoundedCornerShape(50))
+                                            .background(if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA))
+                                            .padding(4.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = false }.background(if (!agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) { Text("General", color = if (!agruparPorTipo) textColor else Color.Gray, fontWeight = if (!agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
+                                        Box(
+                                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).clickable { agruparPorTipo = true }.background(if (agruparPorTipo) surfaceColor else Color.Transparent).padding(8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) { Text("Por Tipo", color = if (agruparPorTipo) textColor else Color.Gray, fontWeight = if (agruparPorTipo) FontWeight.Bold else FontWeight.Normal) }
                                     }
                                 }
                             }
@@ -706,12 +909,21 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                     val agrupados = documentos.groupBy { it.fileExtension }
                                     agrupados.keys.sorted().forEach { ext ->
                                         item(span = { GridItemSpan(maxLineSpan) }) {
-                                            Text(if (ext.isEmpty()) "OTROS" else ext.uppercase(), fontWeight = FontWeight.Bold, color = textColor, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+                                            Text(
+                                                if (ext.isEmpty()) "OTROS" else ext.uppercase(),
+                                                fontWeight = FontWeight.Bold,
+                                                color = textColor,
+                                                fontSize = 14.sp,
+                                                modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+                                            )
                                         }
                                         items(agrupados[ext]!!, key = { it.path }) { doc ->
                                             ItemCardView(doc, itemsSeleccionados.contains(doc.path), modoSeleccionActive, baseURL, token, surfaceColor, textColor) {
                                                 if (modoSeleccionActive) itemsSeleccionados = if (itemsSeleccionados.contains(doc.path)) itemsSeleccionados - doc.path else itemsSeleccionados + doc.path
-                                                else { itemsSeleccionados = setOf(doc.path); descargarSeleccion() }
+                                                else {
+                                                    itemsSeleccionados = setOf(doc.path)
+                                                    descargarSeleccion()
+                                                }
                                             }
                                         }
                                     }
@@ -722,7 +934,10 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                                     items(documentos, key = { it.path }) { doc ->
                                         ItemCardView(doc, itemsSeleccionados.contains(doc.path), modoSeleccionActive, baseURL, token, surfaceColor, textColor) {
                                             if (modoSeleccionActive) itemsSeleccionados = if (itemsSeleccionados.contains(doc.path)) itemsSeleccionados - doc.path else itemsSeleccionados + doc.path
-                                            else { itemsSeleccionados = setOf(doc.path); descargarSeleccion() }
+                                            else {
+                                                itemsSeleccionados = setOf(doc.path)
+                                                descargarSeleccion()
+                                            }
                                         }
                                     }
                                 }
@@ -732,10 +947,15 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
                 }
             }
 
-            // Overlay Cargando
             if (isProcessing) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.background(surfaceColor, RoundedCornerShape(16.dp)).padding(30.dp)) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.background(surfaceColor, RoundedCornerShape(16.dp)).padding(30.dp)
+                    ) {
                         CircularProgressIndicator(color = Color(0xFF2196F3))
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(estadoOperacion, color = textColor, fontWeight = FontWeight.Bold)
@@ -745,13 +965,17 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
         }
     }
 
-    // Dialogo Nueva Carpeta
     if (showDialogCarpeta) {
         AlertDialog(
             onDismissRequest = { showDialogCarpeta = false },
             title = { Text("Nueva Carpeta", color = textColor) },
             text = {
-                OutlinedTextField(value = nombreNuevaCarpeta, onValueChange = { nombreNuevaCarpeta = it }, placeholder = { Text("Nombre") }, singleLine = true)
+                OutlinedTextField(
+                    value = nombreNuevaCarpeta,
+                    onValueChange = { nombreNuevaCarpeta = it },
+                    placeholder = { Text("Nombre") },
+                    singleLine = true
+                )
             },
             confirmButton = { TextButton(onClick = { crearCarpeta() }) { Text("Crear") } },
             dismissButton = { TextButton(onClick = { showDialogCarpeta = false; nombreNuevaCarpeta = "" }) { Text("Cancelar", color = Color.Red) } },
@@ -760,7 +984,6 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
     }
 }
 
-// Componente helper para simplificar vistas verticales
 @Composable
 fun VStack(alignment: Alignment.Horizontal = Alignment.CenterHorizontally, spacing: Int = 0, content: @Composable ColumnScope.() -> Unit) {
     Column(horizontalAlignment = alignment, verticalArrangement = Arrangement.spacedBy(spacing.dp), content = content)
@@ -780,12 +1003,24 @@ fun FolderRowView(carpeta: FBItem, isSelected: Boolean, isSelectionMode: Boolean
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isSelectionMode) {
-            Icon(if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, contentDescription = null, tint = if (isSelected) Color(0xFF2196F3) else Color.Gray.copy(alpha = 0.5f))
+            Icon(
+                if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = if (isSelected) Color(0xFF2196F3) else Color.Gray.copy(alpha = 0.5f)
+            )
             Spacer(modifier = Modifier.width(12.dp))
         }
         Icon(Icons.Default.Folder, contentDescription = null, tint = Color(0xFF2196F3), modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(12.dp))
-        Text(carpeta.name, color = textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(
+            carpeta.name,
+            color = textColor,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
         if (!isSelectionMode) {
             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
         }
@@ -793,11 +1028,25 @@ fun FolderRowView(carpeta: FBItem, isSelected: Boolean, isSelectionMode: Boolean
 }
 
 @Composable
-fun ItemCardView(archivo: FBItem, isSelected: Boolean, isSelectionMode: Boolean, baseURL: String, token: String, surfaceColor: Color, textColor: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun ItemCardView(
+    archivo: FBItem,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
+    baseURL: String,
+    token: String,
+    surfaceColor: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation = if (isSelected) 8.dp else 2.dp, shape = RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = if (isSelected) 0.1f else 0.04f))
+            .shadow(
+                elevation = if (isSelected) 8.dp else 2.dp,
+                shape = RoundedCornerShape(16.dp),
+                spotColor = Color.Black.copy(alpha = if (isSelected) 0.1f else 0.04f)
+            )
             .clip(RoundedCornerShape(16.dp))
             .background(surfaceColor)
             .border(if (isSelected) 2.dp else 0.dp, if (isSelected) Color(0xFF2196F3).copy(alpha = 0.8f) else Color.Transparent, RoundedCornerShape(16.dp))
@@ -812,7 +1061,12 @@ fun ItemCardView(archivo: FBItem, isSelected: Boolean, isSelectionMode: Boolean,
                     .addHeader("X-Auth", token)
                     .crossfade(true)
                     .build()
-                AsyncImage(model = imageRequest, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)))
+                AsyncImage(
+                    model = imageRequest,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))
+                )
             } else {
                 Icon(archivo.iconVector, contentDescription = null, tint = archivo.iconColorUI, modifier = Modifier.size(45.dp))
             }
@@ -822,12 +1076,24 @@ fun ItemCardView(archivo: FBItem, isSelected: Boolean, isSelectionMode: Boolean,
                     if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                     contentDescription = null,
                     tint = if (isSelected) Color(0xFF2196F3) else Color.Gray.copy(alpha = 0.4f),
-                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 10.dp, y = (-10).dp).background(surfaceColor, CircleShape).padding(2.dp)
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 10.dp, y = (-10).dp)
+                        .background(surfaceColor, CircleShape)
+                        .padding(2.dp)
                 )
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Text(archivo.name, color = textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Text(
+            archivo.name,
+            color = textColor,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
         if (!archivo.isDir && archivo.size != null) {
             Text("${archivo.size / 1024} KB", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
         }
