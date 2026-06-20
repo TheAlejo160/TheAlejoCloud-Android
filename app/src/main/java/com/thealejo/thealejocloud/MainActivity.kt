@@ -373,6 +373,57 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
     var showDialogCarpeta by remember { mutableStateOf(false) }
     var nombreNuevaCarpeta by remember { mutableStateOf("") }
 
+    // NUEVO: Variable para guardar la URL temporalmente mientras el usuario elige la carpeta
+    var urlDescargaPendiente by remember { mutableStateOf("") }
+
+    // NUEVO: Launcher que abre el explorador nativo de Android para guardar el archivo
+    val launcherGuardarArchivo = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("*/*")
+    ) { uri ->
+        // Si el usuario cancela la selección, salimos
+        if (uri == null) {
+            modoSeleccionActive = false
+            itemsSeleccionados = emptySet()
+            return@rememberLauncherForActivityResult
+        }
+
+        isProcessing = true
+        estadoOperacion = "Descargando y guardando..."
+
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                // Le damos un buen timeout por si el archivo es pesado
+                val client = OkHttpClient.Builder()
+                    .readTimeout(10, TimeUnit.MINUTES)
+                    .build()
+
+                val request = Request.Builder()
+                    .url(urlDescargaPendiente)
+                    .header("X-Auth", token)
+                    .build()
+
+                try {
+                    val response = client.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        // Escribimos directamente en la ruta que eligió el usuario
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            response.body?.byteStream()?.copyTo(outputStream)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            // Limpiamos la UI al terminar
+            withContext(Dispatchers.Main) {
+                isProcessing = false
+                estadoOperacion = ""
+                modoSeleccionActive = false
+                itemsSeleccionados = emptySet()
+            }
+        }
+    }
+
     val carpetas = archivos.filter { it.isDir }.sortedBy { it.name.lowercase() }
     val documentos = archivos.filter { !it.isDir }.sortedBy { it.name.lowercase() }
 
@@ -522,68 +573,33 @@ fun NubeView(token: String, baseURL: String, isDark: Boolean, surfaceColor: Colo
         }
     }
 
+    // NUEVA FUNCIÓN descargarSeleccion() REEMPLAZADA
     fun descargarSeleccion() {
         if (itemsSeleccionados.isEmpty()) return
-        isProcessing = true
-        estadoOperacion = "Preparando descarga..."
-        scope.launch {
-            val urisToShare = ArrayList<Uri>()
-            withContext(Dispatchers.IO) {
-                val client = OkHttpClient()
 
-                if (itemsSeleccionados.size == 1) {
-                    val path = itemsSeleccionados.first()
-                    val item = archivos.firstOrNull { it.path == path }
-                    val isZip = item?.isDir == true
-                    val rutaSegura = path.replace(" ", "%20")
-                    val urlStr = if (isZip) "$baseURL/api/raw$rutaSegura?algo=zip" else "$baseURL/api/raw$rutaSegura"
-                    val nombreGuardado = if (isZip) "${item?.name ?: "Carpeta"}.zip" else item?.name ?: "Archivo"
+        if (itemsSeleccionados.size == 1) {
+            val path = itemsSeleccionados.first()
+            val item = archivos.firstOrNull { it.path == path }
+            val isZip = item?.isDir == true
+            val rutaSegura = path.replace(" ", "%20")
 
-                    val request = Request.Builder().url(urlStr).header("X-Auth", token).build()
-                    try {
-                        val response = client.newCall(request).execute()
-                        if (response.isSuccessful) {
-                            val tempFile = File(context.cacheDir, nombreGuardado)
-                            val outputStream = FileOutputStream(tempFile)
-                            response.body?.byteStream()?.copyTo(outputStream)
-                            outputStream.close()
-                            urisToShare.add(FileProvider.getUriForFile(context, "${context.packageName}.provider", tempFile))
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                } else {
-                    val pathsStr = itemsSeleccionados.joinToString(",")
-                    val querySegura = pathsStr.replace(" ", "%20")
-                    val urlStr = "$baseURL/api/raw/?files=$querySegura&algo=zip"
-                    val request = Request.Builder().url(urlStr).header("X-Auth", token).build()
-                    try {
-                        val response = client.newCall(request).execute()
-                        if (response.isSuccessful) {
-                            val tempFile = File(context.cacheDir, "Seleccion_Multiple.zip")
-                            val outputStream = FileOutputStream(tempFile)
-                            response.body?.byteStream()?.copyTo(outputStream)
-                            outputStream.close()
-                            urisToShare.add(FileProvider.getUriForFile(context, "${context.packageName}.provider", tempFile))
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-            isProcessing = false
-            if (urisToShare.isNotEmpty()) {
-                val intent = Intent().apply {
-                    action = if (urisToShare.size == 1) Intent.ACTION_SEND else Intent.ACTION_SEND_MULTIPLE
-                    type = "*/*"
-                    if (urisToShare.size == 1) putExtra(Intent.EXTRA_STREAM, urisToShare.first())
-                    else putParcelableArrayListExtra(Intent.EXTRA_STREAM, urisToShare)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                context.startActivity(Intent.createChooser(intent, "Guardar archivo"))
-                modoSeleccionActive = false
-                itemsSeleccionados = emptySet()
-            }
+            // 1. Preparamos la URL de descarga
+            urlDescargaPendiente = if (isZip) "$baseURL/api/raw$rutaSegura?algo=zip" else "$baseURL/api/raw$rutaSegura"
+
+            // 2. Definimos el nombre sugerido para el archivo
+            val nombreGuardado = if (isZip) "${item?.name ?: "Carpeta"}.zip" else item?.name ?: "Archivo"
+
+            // 3. Lanzamos el selector de archivos con el nombre sugerido
+            launcherGuardarArchivo.launch(nombreGuardado)
+        } else {
+            val pathsStr = itemsSeleccionados.joinToString(",")
+            val querySegura = pathsStr.replace(" ", "%20")
+
+            // 1. URL para múltiples archivos (el servidor los empaqueta en ZIP)
+            urlDescargaPendiente = "$baseURL/api/raw/?files=$querySegura&algo=zip"
+
+            // 2. Lanzamos el selector con un nombre genérico para la selección múltiple
+            launcherGuardarArchivo.launch("Seleccion_Multiple.zip")
         }
     }
 
@@ -932,11 +948,6 @@ fun FolderRowView(carpeta: FBItem, isSelected: Boolean, isSelectionMode: Boolean
     }
 }
 
-// -----------------------------------------------------------
-// El "AuthImageView" que simula la lógica multiplataforma de iOS
-// Controla la carga y si falla (ej. MP4 o PDF sin miniatura)
-// pasa directamente al ícono predeterminado en lugar de quedar en blanco.
-// -----------------------------------------------------------
 @Composable
 fun AuthImageView(
     path: String,
@@ -965,7 +976,6 @@ fun AuthImageView(
                 }
             }
             is AsyncImagePainter.State.Error -> {
-                // AQUÍ OCURRE LA MAGIA. Si Filebrowser falla al mandar miniatura, usamos el ícono default
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Icon(fallbackVector, contentDescription = null, tint = fallbackColor, modifier = Modifier.size(45.dp))
                 }
@@ -1006,7 +1016,6 @@ fun ItemCardView(
     ) {
         Box(modifier = Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
             if (archivo.hasPreview) {
-                // Implementando AuthImageView con fallback si da error 404/500
                 AuthImageView(
                     path = archivo.path,
                     baseURL = baseURL,
@@ -1042,7 +1051,6 @@ fun ItemCardView(
             textAlign = TextAlign.Center
         )
         if (!archivo.isDir && archivo.size != null) {
-            // Usa el nuevo formato hermoso en vez de "KB"
             Text(formatBytes(archivo.size), color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
         }
     }
